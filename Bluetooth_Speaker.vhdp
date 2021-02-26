@@ -1,0 +1,100 @@
+Main
+(
+
+    Next        : IN     STD_LOGIC;  --Next Song
+    Prev        : IN     STD_LOGIC;  --Last Song
+    Pause       : In     STD_LOGIC;  --Play/Pause
+    Next_LED    : IN     STD_LOGIC;  --Right LED
+    Prev_LED    : IN     STD_LOGIC;  --Left LED
+    Pause_LED   : In     STD_LOGIC;  --Middle LED
+    
+    Audio_MCLK  : OUT    STD_LOGIC;  --Master Clock
+    Audio_IRQ   : IN     STD_LOGIC;  --Interrupt
+    Audio_SDA   : INOUT  STD_LOGIC;  --I2C Data
+    Audio_SCL   : INOUT  STD_LOGIC;  --I2C Clock
+    Audio_BCLK  : IN     STD_LOGIC;  --I2S Bit Clock
+    Audio_LRCLK : IN     STD_LOGIC;  --I2S Left/Right Clock
+    Audio_SDOUT : IN     STD_LOGIC;  --I2S ADC Data
+    Audio_SDIN  : OUT    STD_LOGIC;  --I2S DAC Data
+    
+    Bluetooth_LRCLK  : OUT STD_LOGIC := '0';
+    Bluetooth_BCLK   : OUT STD_LOGIC := '0';
+    Bluetooth_Data   : IN  STD_LOGIC := '0';
+    Bluetooth_Next   : Out STD_LOGIC := '0';
+    Bluetooth_Prev   : Out STD_LOGIC := '0';
+    Bluetooth_Pause  : Out STD_LOGIC := '0';
+
+)
+{
+
+--Buttons------------------------------------------------------------------------------------------
+    
+    SIGNAL Bluetooth_Out : STD_LOGIC := '1';
+    
+--Volume-------------------------------------------------------------------------------------------
+    
+    SIGNAL Volume    : NATURAL range 0 to 4095 := 0;
+    NewComponent ADC_MAX10_Single
+    (
+        Channel => 0,
+        Data    => Volume,
+    );
+    
+--Mixer--------------------------------------------------------------------------------------------
+    
+    Audio_Codec_Component_DAC_L <= Bluetooth_Data_L when Bluetooth_Out = '1' else Audio_Codec_Component_ADC_L;
+    Audio_Codec_Component_DAC_R <= Bluetooth_Data_R when Bluetooth_Out = '1' else Audio_Codec_Component_ADC_R;
+    
+--Bluetooth----------------------------------------------------------------------------------------
+    
+    SIGNAL Bluetooth_Data_L             : STD_LOGIC_VECTOR (16-1 downto 0) := (others => '0');
+    SIGNAL Bluetooth_Data_R             : STD_LOGIC_VECTOR (16-1 downto 0) := (others => '0');
+    SIGNAL Bluetooth_Ready              : STD_LOGIC := '0';
+
+    NewComponent I2S_Interface_IN
+    (
+        CLK_Frequency      => 12000000,
+        Sampling_Frequency => 32000,
+        Data_Width         => 16,
+        Sample_Bits        => 16,
+        BCLK_Edge          => '1',
+
+        LRCLK              => Bluetooth_LRCLK,
+        BCLK               => Bluetooth_BCLK,
+        Data               => Bluetooth_Data,
+        Data_L             => Bluetooth_Data_L,
+        Data_R             => Bluetooth_Data_R,
+        Ready              => Bluetooth_Ready,
+    );
+
+--Audio Out and Line In----------------------------------------------------------------------------
+
+    SIGNAL Audio_Codec_Component_ADC_L : SIGNED  (15 downto 0);
+    SIGNAL Audio_Codec_Component_ADC_R : SIGNED  (15 downto 0);
+    SIGNAL Audio_Codec_Component_DAC_L : SIGNED  (15 downto 0);
+    SIGNAL Audio_Codec_Component_DAC_R : SIGNED  (15 downto 0);
+
+    NewComponent MAX9867_Interface
+    (
+        Microphone_Ena   => false,   --Use microphone as ADC input
+        Line_In_Ena      => true,    --Use line in as ADC input
+        Differential_Out => false,   --false for audio jack
+        
+        Line_In_Gain => 0,
+        ADC_Volume   => 0,
+        
+        Reset => '0',
+        IRQ   => Audio_IRQ,
+        SDA   => Audio_SDA,
+        SCL   => Audio_SCL,
+        MCLK  => Audio_MCLK,
+        BCLK  => Audio_BCLK,
+        LRCLK => Audio_LRCLK,
+        SDOUT => Audio_SDOUT,
+        SDIN  => Audio_SDIN,
+        ADC_L => Audio_Codec_Component_ADC_L,
+        ADC_R => Audio_Codec_Component_ADC_R,
+        DAC_L => Audio_Codec_Component_DAC_L,
+        DAC_R => Audio_Codec_Component_DAC_R,
+    );
+}
