@@ -205,30 +205,22 @@ Main
         x"7F007F"
     );
     
+    --TODO: Find current average and maximum in last second
     Process ()
     {
         Thread
         {
             For(VARIABLE color : NATURAL range 0 to Colors := 0; color < Colors; color := color + 1)
             {
-                For(VARIABLE i : INTEGER range 0 to LEDs := 0; i < LEDs; i := i + 1)
-                {
-                    LED_Strip_Update <= '1';
-                    Wait(1);
-                    LED_Strip_Update <= '0';
-                    Wait(50ms);  --Every 10ms one Pixel more
-                }
-                For(; i > 0; i := i - 1)
-                {
-                    LED_Strip_Update <= '1';
-                    Wait(1);
-                    LED_Strip_Update <= '0';
-                    Wait(50ms);  --Every 10ms one Pixel less
-                }
+                Wait(1s);
             }
         }
         
-        If(LED_Strip_Address < i)
+        VARIABLE vol : NATURAL range 0 to 31;
+        vol := TO_INTEGER(Audio_Vol(10 downto 6));
+        if(vol > 24) { vol := 24; }
+        
+        If(LED_Strip_Address >= 24-vol AND LED_Strip_Address <= 25+vol)
         {
             LED_Strip_Pixel <= Colors_Arr(color);
         }
@@ -302,6 +294,8 @@ Main
                 {
                     analog_max := analog_sum;
                 }
+                
+                Wait(30us);
             }
             
             analog_dif    := unsigned(abs(resize(analog_max, 18) - resize(analog_min, 18)))(16 downto 0);
@@ -316,6 +310,11 @@ Main
                 --Bluetooth_Out <= '1';
                 Audio_Vol <= bluetooth_dif;
             }
+            
+            Wait(2);
+            LED_Strip_Update <= '1';
+            Wait(1);
+            LED_Strip_Update <= '0';
         }
     }
     
