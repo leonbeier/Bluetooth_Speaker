@@ -1,12 +1,12 @@
 Main
 (
 
-    Next        : IN     STD_LOGIC;  --Next Song
-    Prev        : IN     STD_LOGIC;  --Last Song
-    Pause       : In     STD_LOGIC;  --Play/Pause
-    Next_LED    : IN     STD_LOGIC;  --Right LED
-    Prev_LED    : IN     STD_LOGIC;  --Left LED
-    Pause_LED   : In     STD_LOGIC;  --Middle LED
+    Next_Btn    : IN     STD_LOGIC;  --Next Song
+    Prev_Btn    : IN     STD_LOGIC;  --Last Song
+    Pause_Btn   : IN     STD_LOGIC;  --Play/Pause
+    Next_LED    : OUT    STD_LOGIC;  --Right LED
+    Prev_LED    : OUT    STD_LOGIC;  --Left LED
+    Pause_LED   : OUT    STD_LOGIC;  --Middle LED
     
     Audio_MCLK  : OUT    STD_LOGIC;  --Master Clock
     Audio_IRQ   : IN     STD_LOGIC;  --Interrupt
@@ -33,12 +33,12 @@ Main
     {
         Thread
         {
-            While(Next OR Prev OR Pause = '1')  { Wait(100ms); } --Wait until Button released
-            While(Next AND Prev AND Pause = '0'){ Wait(100ms); } --Wait for Button pressed
+            While((Next_Btn OR Prev_Btn OR Pause_Btn) = '1')  { Wait(100ms); } --Wait until Button released
+            While((Next_Btn AND Prev_Btn AND Pause_Btn) = '0'){ Wait(100ms); } --Wait for Button pressed
             VARIABLE btn_reg : STD_LOGIC_VECTOR(2 downto 0);
-            btn_reg(0) := Next;  --Save values in case the button isn't pressed any more
-            btn_reg(1) := Prev;
-            btn_reg(2) := Pause;
+            btn_reg(0) := Next_Btn;  --Save values in case the button isn't pressed any more
+            btn_reg(1) := Prev_Btn;
+            btn_reg(2) := Pause_Btn;
             --Simulate double click for bluetooth module (one click is vol up/down). Single click for Pause
             For(VARIABLE ctr : NATURAL range 0 to 2 := 0; ctr < 2 OR btn_reg(2) = '1'; ctr := ctr + 1)
             {
@@ -55,6 +55,120 @@ Main
     
 --LEDs---------------------------------------------------------------------------------------------
     
+    Process ()
+    {
+        VARIABLE Inc_Brightness : STD_LOGIC_VECTOR(2 downto 0) := "000";
+        VARIABLE Trig           : STD_LOGIC_VECTOR(2 downto 0) := "000";
+        Thread  --Wait for left button pressed
+        {
+            While(ISSP_source(1) = '1'){ Wait(100ms); } --Wait until Button released
+            While(ISSP_source(1) = '0'){ Wait(100ms); } --Wait for Button pressed
+            Inc_Brightness(0) := '1';
+            Trig(0) := '1';
+            ctr0 := 0;
+        }
+        Thread  --Wait for middle button pressed
+        {
+            While(Pause_Btn = '1'){ Wait(100ms); } --Wait until Button released
+            While(Pause_Btn = '0'){ Wait(100ms); } --Wait for Button pressed
+            Inc_Brightness(1) := '1';
+            Trig(1) := '1';
+            ctr1 := 0;
+        }
+        Thread  --Wait for right button pressed
+        {
+            While(ISSP_source(2) = '1'){ Wait(100ms); } --Wait until Button released
+            While(ISSP_source(2) = '0'){ Wait(100ms); } --Wait for Button pressed
+            Inc_Brightness(2) := '1';
+            Trig(2) := '1';
+            ctr2 := 0;
+        }
+        Thread  --Light Effect for left button
+        {
+            While(Inc_Brightness(0) = '0')
+            {
+                If(UNSIGNED(LED_Brightness(0)) > 0)
+                {
+                    LED_Brightness(0) <= STD_LOGIC_VECTOR(UNSIGNED(LED_Brightness(0)) - 1);
+                    Wait(400us);
+                }
+            }
+            For(VARIABLE ctr0 : NATURAL range 0 to 256 := 0; ctr0 < 256; ctr0 := ctr0 + 1)
+            {
+                If(UNSIGNED(LED_Brightness(0)) < 255)
+                {
+                    LED_Brightness(0) <= STD_LOGIC_VECTOR(UNSIGNED(LED_Brightness(0)) + 1);
+                }
+                If(ctr0 = 127 AND Trig(0) = '1')
+                {
+                    Inc_Brightness(1) := '1';
+                }
+                If(ctr0 = 255 AND Trig(0) = '1')
+                {
+                    Inc_Brightness(2) := '1';
+                }
+                Wait(600us);
+            }
+            Inc_Brightness(0) := '0';
+            Trig(0) := '0';
+        }
+        Thread  --Light Effect for middle button
+        {
+            While(Inc_Brightness(1) = '0')
+            {
+                If(UNSIGNED(LED_Brightness(1)) > 0)
+                {
+                    LED_Brightness(1) <= STD_LOGIC_VECTOR(UNSIGNED(LED_Brightness(1)) - 1);
+                    Wait(400us);
+                }
+            }
+            For(VARIABLE ctr1 : NATURAL range 0 to 256 := 0; ctr1 < 256; ctr1 := ctr1 + 1)
+            {
+                If(UNSIGNED(LED_Brightness(1)) < 255)
+                {
+                    LED_Brightness(1) <= STD_LOGIC_VECTOR(UNSIGNED(LED_Brightness(1)) + 1);
+                }
+                If(ctr1 = 127 AND Trig(1) = '1')
+                {
+                    Inc_Brightness(0) := '1';
+                    Inc_Brightness(2) := '1';
+                }
+                Wait(600us);
+            }
+            Inc_Brightness(1) := '0';
+            Trig(1) := '0';
+        }
+        Thread  --Light Effect for right button
+        {
+            While(Inc_Brightness(2) = '0')
+            {
+                If(UNSIGNED(LED_Brightness(2)) > 0)
+                {
+                    LED_Brightness(2) <= STD_LOGIC_VECTOR(UNSIGNED(LED_Brightness(2)) - 1);
+                    Wait(400us);
+                }
+            }
+            For(VARIABLE ctr2 : NATURAL range 0 to 256 := 0; ctr2 < 256; ctr2 := ctr2 + 1)
+            {
+                If(UNSIGNED(LED_Brightness(2)) < 255)
+                {
+                    LED_Brightness(2) <= STD_LOGIC_VECTOR(UNSIGNED(LED_Brightness(2)) + 1);
+                }
+                If(ctr2 = 127 AND Trig(2) = '1')
+                {
+                    Inc_Brightness(1) := '1';
+                }
+                If(ctr2 = 255 AND Trig(2) = '1')
+                {
+                    Inc_Brightness(0) := '1';
+                }
+                Wait(600us);
+            }
+            Inc_Brightness(2) := '0';
+            Trig(2) := '0';
+        }
+    }
+    
     --When button pressed -> LED lights up and wave goes trough leds next to it
     SIGNAL LED_reg : STD_LOGIC_VECTOR(2 downto 0);
     Prev_LED  <= LED_reg(0);
@@ -69,7 +183,7 @@ Main
         NewComponent PWM_Generator
         (
             Duty            => LED_Brightness(i),
-            PWM_Out         => LED_reg(i),
+            PWM_Out(0)      => LED_reg(i),
         );
     }
     
@@ -98,8 +212,8 @@ Main
     
 --Mixer--------------------------------------------------------------------------------------------
     
-    Audio_Codec_Component_DAC_L <= Bluetooth_Data_L when Bluetooth_Out = '1' else Audio_Codec_Component_ADC_L;
-    Audio_Codec_Component_DAC_R <= Bluetooth_Data_R when Bluetooth_Out = '1' else Audio_Codec_Component_ADC_R;
+    Audio_Codec_Component_DAC_L <= SIGNED(Bluetooth_Data_L) when Bluetooth_Out = '1' else Audio_Codec_Component_ADC_L;
+    Audio_Codec_Component_DAC_R <= SIGNED(Bluetooth_Data_R) when Bluetooth_Out = '1' else Audio_Codec_Component_ADC_R;
     
 --Bluetooth----------------------------------------------------------------------------------------
     
@@ -123,7 +237,7 @@ Main
         Ready              => Bluetooth_Ready,
     );
     
-    ISSP_probe <= Bluetooth_Data_L & Audio_Codec_Component_ADC_L;
+    ISSP_probe <= Bluetooth_Data_L & STD_LOGIC_VECTOR(Audio_Codec_Component_ADC_L);
     Bluetooth_Out <= ISSP_source(0);
     
     SIGNAL ISSP_source : std_logic_vector (7 downto 0);

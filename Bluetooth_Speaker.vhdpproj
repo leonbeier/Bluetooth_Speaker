@@ -4,13 +4,22 @@
   <Items xsi:type="ProjectFolder">
     <Header>Generated</Header>
     <Items xsi:type="ProjectFileVHDL">
+      <Header>ADC_MAX10_Single.vhd</Header>
+    </Items>
+    <Items xsi:type="ProjectFileVHDL">
       <Header>Bluetooth_Speaker.vhd</Header>
     </Items>
     <Items xsi:type="ProjectFileVHDL">
       <Header>I2C_Master_Interface.vhd</Header>
     </Items>
     <Items xsi:type="ProjectFileVHDL">
+      <Header>I2S_Interface_IN.vhd</Header>
+    </Items>
+    <Items xsi:type="ProjectFileVHDL">
       <Header>MAX9867_Interface.vhd</Header>
+    </Items>
+    <Items xsi:type="ProjectFileVHDL">
+      <Header>PWM_Generator.vhd</Header>
     </Items>
   </Items>
   <Items xsi:type="ProjectFolder">
