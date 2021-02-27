@@ -262,16 +262,18 @@ Main
         Thread
         {
             VARIABLE analog_sum    : SIGNED (16 downto 0);
+            VARIABLE analog_dif    : UNSIGNED (16 downto 0);
             VARIABLE analog_min    : SIGNED (16 downto 0);
             VARIABLE analog_max    : SIGNED (16 downto 0);
             VARIABLE bluetooth_sum : SIGNED (16 downto 0);
+            VARIABLE bluetooth_dif : UNSIGNED (16 downto 0);
             VARIABLE bluetooth_min : SIGNED (16 downto 0);
             VARIABLE bluetooth_max : SIGNED (16 downto 0);
-            SIGNAL Audio_Vol       : SIGNED(17 downto 0);
+            SIGNAL Audio_Vol       : UNSIGNED (16 downto 0);
             --Check 1000 samples and calculate the amplitude -> The louder signal is played
             For(VARIABLE ctr : NATURAL range 0 to 500 := 0; ctr < 500; ctr := ctr + 1)
             {
-                bluetooth_sum := SIGNED(Bluetooth_Data_L) + SIGNED(Bluetooth_Data_R);
+                bluetooth_sum := resize(SIGNED(Bluetooth_Data_L), 17) + resize(SIGNED(Bluetooth_Data_R), 17);
                 If(ctr = 0)
                 {
                     bluetooth_min := bluetooth_sum;
@@ -286,7 +288,7 @@ Main
                     bluetooth_max := bluetooth_sum;
                 }
                 
-                analog_sum := Audio_Codec_Component_ADC_L + Audio_Codec_Component_ADC_R;
+                analog_sum := resize(Audio_Codec_Component_ADC_L, 17) + resize(Audio_Codec_Component_ADC_R, 17);
                 If(ctr = 0)
                 {
                     analog_min := analog_sum;
@@ -302,15 +304,17 @@ Main
                 }
             }
             
-            If(analog_max-analog_min > bluetooth_max-bluetooth_min)
+            analog_dif    := unsigned(abs(resize(analog_max, 18) - resize(analog_min, 18)))(16 downto 0);
+            bluetooth_dif := unsigned(abs(resize(bluetooth_max, 18) - resize(analog_min, 18)))(16 downto 0);
+            If(analog_dif > bluetooth_dif+500)
             {
                 --Bluetooth_Out <= '0';
-                Audio_Vol <= analog_max-analog_min;
+                Audio_Vol <= analog_dif;
             }
             Else
             {
                 --Bluetooth_Out <= '1';
-                Audio_Vol <= bluetooth_max-bluetooth_min;
+                Audio_Vol <= bluetooth_dif;
             }
         }
     }
@@ -352,7 +356,7 @@ Main
     );
     
     --ISSP_probe <= Bluetooth_Data_L & STD_LOGIC_VECTOR(Audio_Codec_Component_ADC_L);
-    ISSP_probe(17 downto 0) <= STD_LOGIC_VECTOR(Audio_Vol);
+    ISSP_probe(16 downto 0) <= STD_LOGIC_VECTOR(Audio_Vol);
     Bluetooth_Out <= ISSP_source(0);
     
     SIGNAL ISSP_source : std_logic_vector (7 downto 0);
