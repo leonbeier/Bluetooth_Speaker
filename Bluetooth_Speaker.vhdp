@@ -217,7 +217,7 @@ Main
         }
         
         VARIABLE vol : NATURAL range 0 to 31;
-        vol := TO_INTEGER(Audio_Vol(10 downto 6));
+        vol := TO_INTEGER(Audio_Vol(12 downto 8));
         if(vol > 24) { vol := 24; }
         
         If(LED_Strip_Address >= 24-vol AND LED_Strip_Address <= 25+vol)
