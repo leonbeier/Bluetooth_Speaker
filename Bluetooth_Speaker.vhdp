@@ -28,8 +28,64 @@ Main
 {
 
 --Buttons------------------------------------------------------------------------------------------
+
+    Process ()
+    {
+        Thread
+        {
+            While(Next OR Prev OR Pause = '1')  { Wait(100ms); } --Wait until Button released
+            While(Next AND Prev AND Pause = '0'){ Wait(100ms); } --Wait for Button pressed
+            VARIABLE btn_reg : STD_LOGIC_VECTOR(2 downto 0);
+            btn_reg(0) := Next;  --Save values in case the button isn't pressed any more
+            btn_reg(1) := Prev;
+            btn_reg(2) := Pause;
+            --Simulate double click for bluetooth module (one click is vol up/down). Single click for Pause
+            For(VARIABLE ctr : NATURAL range 0 to 2 := 0; ctr < 2 OR btn_reg(2) = '1'; ctr := ctr + 1)
+            {
+                Bluetooth_Next  <= btn_reg(0);
+                Bluetooth_Prev  <= btn_reg(1);
+                Bluetooth_Pause <= btn_reg(2);
+                Wait(200ms);
+                Bluetooth_Next <= '0';
+                Bluetooth_Prev <= '0';
+                Wait(200ms);
+            }
+        }
+    }
+    
+--LEDs---------------------------------------------------------------------------------------------
+    
+    --When button pressed -> LED lights up and wave goes trough leds next to it
+    SIGNAL LED_reg : STD_LOGIC_VECTOR(2 downto 0);
+    Prev_LED  <= LED_reg(0);
+    Pause_LED <= LED_reg(1);
+    Next_LED  <= LED_reg(2);
+    
+    TYPE LED_Brightness_type IS ARRAY (0 to 2) OF STD_LOGIC_VECTOR(7 downto 0);
+    SIGNAL LED_Brightness : LED_Brightness_type;
+    
+    Generate (for i in 0 to 2)
+    {
+        NewComponent PWM_Generator
+        (
+            Duty            => LED_Brightness(i),
+            PWM_Out         => LED_reg(i),
+        );
+    }
+    
+--Channel Watcher----------------------------------------------------------------------------------
     
     SIGNAL Bluetooth_Out : STD_LOGIC := '1';
+    Process ()
+    {
+        Thread
+        {
+            VARIABLE analog_min    : SIGNED (15 downto 0);
+            VARIABLE analog_max    : SIGNED (15 downto 0);
+            VARIABLE bluetooth_min : SIGNED (15 downto 0);
+            VARIABLE bluetooth_max : SIGNED (15 downto 0);
+        }
+    }
     
 --Volume-------------------------------------------------------------------------------------------
     
@@ -65,6 +121,17 @@ Main
         Data_L             => Bluetooth_Data_L,
         Data_R             => Bluetooth_Data_R,
         Ready              => Bluetooth_Ready,
+    );
+    
+    ISSP_probe <= Bluetooth_Data_L & Audio_Codec_Component_ADC_L;
+    Bluetooth_Out <= ISSP_source(0);
+    
+    SIGNAL ISSP_source : std_logic_vector (7 downto 0);
+    SIGNAL ISSP_probe  : std_logic_vector (31 downto 0) := (others => 'X');
+    NewComponent ISSP
+    (
+        source =>ISSP_source,
+        probe  =>ISSP_probe,
     );
 
 --Audio Out and Line In----------------------------------------------------------------------------
