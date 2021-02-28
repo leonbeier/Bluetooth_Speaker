@@ -1,9 +1,9 @@
 Main
 (
 
-    Next_Btn    : IN     STD_LOGIC;  --Next Song
-    Prev_Btn    : IN     STD_LOGIC;  --Last Song
-    Pause_Btn   : IN     STD_LOGIC;  --Play/Pause
+    Next_Btn_n  : IN     STD_LOGIC;  --Next Song
+    Prev_Btn_n  : IN     STD_LOGIC;  --Last Song
+    Pause_Btn_n : IN     STD_LOGIC;  --Play/Pause
     Next_LED    : OUT    STD_LOGIC;  --Right LED
     Prev_LED    : OUT    STD_LOGIC;  --Left LED
     Pause_LED   : OUT    STD_LOGIC;  --Middle LED
@@ -17,8 +17,8 @@ Main
     Audio_SDOUT : IN     STD_LOGIC;  --I2S ADC Data
     Audio_SDIN  : OUT    STD_LOGIC;  --I2S DAC Data
     
-    Bluetooth_LRCLK  : OUT STD_LOGIC := '0';
-    Bluetooth_BCLK   : OUT STD_LOGIC := '0';
+    Bluetooth_LRCLK  : IN  STD_LOGIC := '0';
+    Bluetooth_BCLK   : IN  STD_LOGIC := '0';
     Bluetooth_Data   : IN  STD_LOGIC := '0';
     Bluetooth_Next   : Out STD_LOGIC := '0';
     Bluetooth_Prev   : Out STD_LOGIC := '0';
@@ -31,6 +31,14 @@ Main
 
 --Buttons------------------------------------------------------------------------------------------
 
+    SIGNAL Next_Btn  : STD_LOGIC;  --Next Song
+    SIGNAL Prev_Btn  : STD_LOGIC;  --Last Song
+    SIGNAL Pause_Btn : STD_LOGIC;  --Play/Pause
+    
+    Next_Btn <= NOT Next_Btn_n;
+    Prev_Btn <= NOT Prev_Btn_n;
+    Pause_Btn <= NOT Pause_Btn_n;
+    
     Process ()
     {
         Thread
@@ -42,14 +50,15 @@ Main
             btn_reg(1) := Prev_Btn;
             btn_reg(2) := Pause_Btn;
             --Simulate double click for bluetooth module (one click is vol up/down). Single click for Pause
-            For(VARIABLE ctr : NATURAL range 0 to 2 := 0; ctr < 2 OR btn_reg(2) = '1'; ctr := ctr + 1)
+            For(VARIABLE ctr : NATURAL range 0 to 2 := 0; ctr < 2 AND btn_reg(2) = '0'; ctr := ctr + 1)
             {
                 Bluetooth_Next  <= btn_reg(0);
                 Bluetooth_Prev  <= btn_reg(1);
                 Bluetooth_Pause <= btn_reg(2);
                 Wait(200ms);
-                Bluetooth_Next <= '0';
-                Bluetooth_Prev <= '0';
+                Bluetooth_Next  <= '0';
+                Bluetooth_Prev  <= '0';
+                Bluetooth_Pause <= '0';
                 Wait(200ms);
             }
         }
@@ -63,8 +72,8 @@ Main
         VARIABLE Trig           : STD_LOGIC_VECTOR(2 downto 0) := "000";
         Thread  --Wait for left button pressed
         {
-            While(ISSP_source(1) = '1'){ Wait(100ms); } --Wait until Button released
-            While(ISSP_source(1) = '0'){ Wait(100ms); } --Wait for Button pressed
+            While(Prev_Btn = '1'){ Wait(100ms); } --Wait until Button released
+            While(Prev_Btn = '0'){ Wait(100ms); } --Wait for Button pressed
             Inc_Brightness(0) := '1';
             Trig(0) := '1';
             ctr0 := 0;
@@ -79,8 +88,8 @@ Main
         }
         Thread  --Wait for right button pressed
         {
-            While(ISSP_source(2) = '1'){ Wait(100ms); } --Wait until Button released
-            While(ISSP_source(2) = '0'){ Wait(100ms); } --Wait for Button pressed
+            While(Next_Btn = '1'){ Wait(100ms); } --Wait until Button released
+            While(Next_Btn = '0'){ Wait(100ms); } --Wait for Button pressed
             Inc_Brightness(2) := '1';
             Trig(2) := '1';
             ctr2 := 0;
@@ -254,11 +263,11 @@ Main
         Thread
         {
             VARIABLE analog_sum    : SIGNED (16 downto 0);
-            VARIABLE analog_dif    : UNSIGNED (16 downto 0);
+            SIGNAL   analog_dif    : UNSIGNED (16 downto 0);
             VARIABLE analog_min    : SIGNED (16 downto 0);
             VARIABLE analog_max    : SIGNED (16 downto 0);
             VARIABLE bluetooth_sum : SIGNED (16 downto 0);
-            VARIABLE bluetooth_dif : UNSIGNED (16 downto 0);
+            SIGNAL   bluetooth_dif : UNSIGNED (16 downto 0);
             VARIABLE bluetooth_min : SIGNED (16 downto 0);
             VARIABLE bluetooth_max : SIGNED (16 downto 0);
             SIGNAL Audio_Vol       : UNSIGNED (16 downto 0);
@@ -298,8 +307,8 @@ Main
                 Wait(30us);
             }
             
-            analog_dif    := unsigned(abs(resize(analog_max, 18) - resize(analog_min, 18)))(16 downto 0);
-            bluetooth_dif := unsigned(abs(resize(bluetooth_max, 18) - resize(analog_min, 18)))(16 downto 0);
+            analog_dif    <= unsigned(abs(resize(analog_max, 18) - resize(analog_min, 18)))(16 downto 0);
+            bluetooth_dif <= unsigned(abs(resize(bluetooth_max, 18) - resize(analog_min, 18)))(16 downto 0);
             If(analog_dif > bluetooth_dif+500)
             {
                 --Bluetooth_Out <= '0';
@@ -320,42 +329,174 @@ Main
     
 --Volume-------------------------------------------------------------------------------------------
     
-    SIGNAL Volume    : NATURAL range 0 to 4095 := 0;
+    SIGNAL Volume        : NATURAL range 0 to 15   := 0;
+    Volume <= TO_INTEGER(TO_UNSIGNED(Volume_Raw, 12)(11 downto 8));
+    SIGNAL Volume_Raw    : NATURAL range 0 to 4095 := 0;
     NewComponent ADC_MAX10_Single
     (
         Channel => 0,
-        Data    => Volume,
+        Data    => Volume_Raw,
     );
     
 --Mixer--------------------------------------------------------------------------------------------
     
-    Audio_Codec_Component_DAC_L <= SIGNED(Bluetooth_Data_L) when Bluetooth_Out = '1' else Audio_Codec_Component_ADC_L;
-    Audio_Codec_Component_DAC_R <= SIGNED(Bluetooth_Data_R) when Bluetooth_Out = '1' else Audio_Codec_Component_ADC_R;
+    SIGNAL Signal_Out_L : SIGNED  (15 downto 0);
+    SIGNAL Signal_Out_R : SIGNED  (15 downto 0);
+    Process ()
+    {
+        Thread
+        {
+            VARIABLE Volume_Shifts : NATURAL range 0 to 7;
+            Volume_Shifts := Volume/2;
+            While(true)
+            {
+                If(Volume > (Volume_Shifts*2+1) OR Volume < (Volume_Shifts*2-1))
+                {
+                    Volume_Shifts := Volume/2;
+                }
+                Wait(100ms);
+            }
+        }
+        
+        VARIABLE Analog_On    : STD_LOGIC := '0';
+        VARIABLE Bluetooth_On : STD_LOGIC := '0';
+        If(Analog_On = '0' and analog_dif > 500)
+        {
+            Analog_On := '1';
+        }
+        Elsif(Analog_On = '1' and analog_dif < 200)
+        {
+            Analog_On := '0';
+        }
+        
+        If(Bluetooth_On = '0' and bluetooth_dif > 500)
+        {
+            Bluetooth_On := '1';
+        }
+        Elsif(Bluetooth_On = '1' and bluetooth_dif < 200)
+        {
+            Bluetooth_On := '0';
+        }
+
+        If(Bluetooth_Out = '1')
+        {
+            /*
+            If(Bluetooth_On = '1')
+            {
+                Signal_Out_L <= SIGNED(Bluetooth_Data_L);
+                Signal_Out_R <= SIGNED(Bluetooth_Data_R);
+            }
+            Else
+            {
+                Signal_Out_L <= (others => '0');
+                Signal_Out_R <= (others => '0');
+            }
+            */
+            Signal_Out_L <= SIGNED(Bluetooth_Data_L);
+            Signal_Out_R <= SIGNED(Bluetooth_Data_R);
+        }
+        Else
+        {
+            /*
+            If(Analog_On = '1')
+            {
+                Signal_Out_L <= Audio_Codec_Component_ADC_L;
+                Signal_Out_R <= Audio_Codec_Component_ADC_R;
+            }
+            Else
+            {
+                Signal_Out_L <= (others => '0');
+                Signal_Out_R <= (others => '0');
+            }
+            */
+            Signal_Out_L <= Audio_Codec_Component_ADC_L;
+            Signal_Out_R <= Audio_Codec_Component_ADC_R;
+        }
+        
+        --Signal_Out_L <= x"0000" when Bluetooth_Out = '1' else Audio_Codec_Component_ADC_L;
+        --Signal_Out_R <= x"0000" when Bluetooth_Out = '1' else Audio_Codec_Component_ADC_R;
+        Audio_Codec_Component_DAC_L <= shift_right(Signal_Out_L, (7-Volume_Shifts));
+        Audio_Codec_Component_DAC_R <= shift_right(Signal_Out_R, (7-Volume_Shifts));
+        --Audio_Codec_Component_DAC_L <= TO_SIGNED(TO_INTEGER(Signal_Out_L)/(256-Volume), 16);
+        --Audio_Codec_Component_DAC_R <= TO_SIGNED(TO_INTEGER(Signal_Out_R)/(256-Volume), 16);
+        --Audio_Codec_Component_DAC_L <= Audio_Codec_Component_ADC_L;
+        --Audio_Codec_Component_DAC_R <= Audio_Codec_Component_ADC_R;
+        
+        /*
+        If(ISSP_source(1) = '1')
+        {
+            ISSP_probe <= STD_LOGIC_VECTOR(TO_UNSIGNED(Volume, ISSP_probe'LENGTH));
+        }
+        Elsif(ISSP_source(2) = '1')
+        {
+            ISSP_probe <= STD_LOGIC_VECTOR(resize(Audio_Codec_Component_ADC_L,32));
+        }
+        Elsif(ISSP_source(3) = '1')
+        {
+            ISSP_probe <= STD_LOGIC_VECTOR(resize(SIGNED(Bluetooth_Data_L),32));
+        }
+        Elsif(ISSP_source(4) = '1')
+        {
+            ISSP_probe(15 downto 0) <= STD_LOGIC_VECTOR(shift_right(SIGNED(Bluetooth_Data_L), (7-Volume_Shifts)));
+        }
+        Elsif(ISSP_source(5) = '1')
+        {
+            ISSP_probe(16 downto 0) <= STD_LOGIC_VECTOR(analog_dif);
+        }
+        Elsif(ISSP_source(6) = '1')
+        {
+            ISSP_probe(16 downto 0) <= STD_LOGIC_VECTOR(bluetooth_dif);
+        }
+        */
+    }
     
 --Bluetooth----------------------------------------------------------------------------------------
     
     SIGNAL Bluetooth_Data_L             : STD_LOGIC_VECTOR (16-1 downto 0) := (others => '0');
     SIGNAL Bluetooth_Data_R             : STD_LOGIC_VECTOR (16-1 downto 0) := (others => '0');
-    SIGNAL Bluetooth_Ready              : STD_LOGIC := '0';
 
+    /*
     NewComponent I2S_Interface_IN
     (
         CLK_Frequency      => 12000000,
         Sampling_Frequency => 32000,
         Data_Width         => 16,
-        Sample_Bits        => 16,
-        BCLK_Edge          => '1',
+        Sample_Bits        => 16, --16 with delay edge
+        BCLK_Edge          => '0',
+        Delay_Edge         => '0',
 
         LRCLK              => Bluetooth_LRCLK,
         BCLK               => Bluetooth_BCLK,
-        Data               => Bluetooth_Data,
-        Data_L             => Bluetooth_Data_L,
-        Data_R             => Bluetooth_Data_R,
-        Ready              => Bluetooth_Ready,
+        --Data               => Bluetooth_Data,
+        --Data_L             => Bluetooth_Data_L,
+        --Data_R             => Bluetooth_Data_R,
+        --Ready              => Bluetooth_Ready,
+    );
+    */
+    
+    NewComponent i2s_in
+    (
+        i2s  => '1',
+        bits => 16,
+
+        clk  => CLK,
+        in_R => Bluetooth_Data_R,
+        in_L => Bluetooth_Data_L,
+        sck  => Bluetooth_BCLK,
+        ws   => Bluetooth_LRCLK,
+        sd   => Bluetooth_Data,
     );
     
-    --ISSP_probe <= Bluetooth_Data_L & STD_LOGIC_VECTOR(Audio_Codec_Component_ADC_L);
-    ISSP_probe(16 downto 0) <= STD_LOGIC_VECTOR(Audio_Vol);
+    ISSP_probe(16 downto 0) <= STD_LOGIC_VECTOR(analog_dif) when ISSP_source(1) = '1' else STD_LOGIC_VECTOR(bluetooth_dif);
+    --ISSP_probe <= STD_LOGIC_VECTOR(TO_UNSIGNED(Volume, ISSP_probe'LENGTH)) when ISSP_source(1) = '0' else
+    --STD_LOGIC_VECTOR(resize(Audio_Codec_Component_ADC_L,32)) when ISSP_source(2) = '0' else
+    --STD_LOGIC_VECTOR(resize(SIGNED(Bluetooth_Data_L),32));
+    --ISSP_probe(15 downto 0) <= STD_LOGIC_VECTOR(Audio_Codec_Component_ADC_L);
+    --ISSP_probe <= STD_LOGIC_VECTOR(resize(SIGNED(Bluetooth_Data_R(14 downto 0)), 16)) & Bluetooth_Data_R;
+    --ISSP_probe <= Bluetooth_Data_L & Bluetooth_Data_R;
+    --ISSP_probe <= STD_LOGIC_VECTOR(Audio_Codec_Component_ADC_L) & Bluetooth_Data_L;
+    --ISSP_probe <= Bluetooth_Data_L & Bluetooth_Data_R;
+    --ISSP_probe(16 downto 0) <= STD_LOGIC_VECTOR(Audio_Vol);
     Bluetooth_Out <= ISSP_source(0);
     
     SIGNAL ISSP_source : std_logic_vector (7 downto 0);
@@ -377,10 +518,11 @@ Main
     (
         Microphone_Ena   => false,   --Use microphone as ADC input
         Line_In_Ena      => true,    --Use line in as ADC input
-        Differential_Out => false,   --false for audio jack
+        Differential_Out => false,    --false for audio jack
         
         Line_In_Gain => 0,
         ADC_Volume   => 0,
+        DAC_Volume   => 0,
         
         Reset => '0',
         IRQ   => Audio_IRQ,

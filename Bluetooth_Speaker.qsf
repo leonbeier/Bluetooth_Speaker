@@ -23,18 +23,17 @@ set_global_assignment -name VHDL_FILE Generated/ADC_MAX10_Single.vhd
 set_global_assignment -name VHDL_FILE Generated/Bluetooth_Speaker.vhd
 set_global_assignment -name VHDL_FILE Generated/I2C_Master_Interface.vhd
 set_global_assignment -name VHDL_FILE Generated/I2S_Interface_IN.vhd
+set_global_assignment -name VHDL_FILE Generated/I2S_Interface_OUT.vhd
 set_global_assignment -name VHDL_FILE Generated/MAX9867_Interface.vhd
 set_global_assignment -name VHDL_FILE Generated/PWM_Generator.vhd
 set_global_assignment -name VHDL_FILE Generated/WS2812_Interface.vhd
 set_global_assignment -name QSYS_FILE Libraries/ISSP/ISSP.qsys
 set_global_assignment -name QSYS_FILE Libraries/ADC_QSYS.qsys
+set_global_assignment -name VHDL_FILE i2s_in.vhd
 set_location_assignment PIN_H6 -to CLK
 set_location_assignment PIN_H3 -to LED_Strip_Out
-set_location_assignment PIN_C10 -to Next_Btn
 set_location_assignment PIN_E8 -to Next_LED
-set_location_assignment PIN_N9 -to Pause_Btn
 set_location_assignment PIN_N10 -to Pause_LED
-set_location_assignment PIN_L10 -to Prev_Btn
 set_location_assignment PIN_M10 -to Prev_LED
 set_location_assignment PIN_C9 -to Bluetooth_BCLK
 set_location_assignment PIN_A8 -to Bluetooth_Data
@@ -54,3 +53,6 @@ set_location_assignment PIN_J7 -to Audio_SCL
 set_location_assignment PIN_K7 -to Audio_SDA
 set_location_assignment PIN_M11 -to Audio_SDIN
 set_location_assignment PIN_M12 -to Audio_SDOUT
+set_location_assignment PIN_C10 -to Next_Btn_n
+set_location_assignment PIN_N9 -to Pause_Btn_n
+set_location_assignment PIN_L10 -to Prev_Btn_n

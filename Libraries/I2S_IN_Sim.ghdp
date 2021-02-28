@@ -1,0 +1,86 @@
+Component I2S_Interface_IN_tb()
+{
+    SIGNAL finished : STD_LOGIC:= '0';
+    CONSTANT period_time : TIME := 83333 ps;
+
+    Process Sim_finished()
+    {
+        wait for 10000 us;
+        finished <= '1';
+        wait;
+    }
+
+    NewComponent I2S_Interface_IN
+    (
+        CLK_Frequency => CLK_Frequency,
+        Sampling_Frequency => Sampling_Frequency,
+        Data_Width => Data_Width,
+        Sample_Bits => Sample_Bits,
+        BCLK_Edge => BCLK_Edge,
+        Delay_Edge => '1',
+        Reset => Reset,
+        LRCLK => LRCLK,
+        BCLK => BCLK,
+        Data => Data,
+        Data_L => Data_L,
+        Data_R => Data_R,
+        Ready => Ready,
+        CLK => CLK,
+    );
+
+    SIGNAL CLK_Frequency : NATURAL  := 12000000;
+    SIGNAL Sampling_Frequency : NATURAL  := 48000;
+    SIGNAL Data_Width : INTEGER range 16 to 32 := 16;
+    SIGNAL Sample_Bits : INTEGER range 16 to 32 := 31;
+    SIGNAL BCLK_Edge : STD_LOGIC  := '1';
+    SIGNAL Reset : STD_LOGIC  := '0';
+    SIGNAL LRCLK : STD_LOGIC  := '0';
+    SIGNAL BCLK : STD_LOGIC  := '0';
+    SIGNAL Data : STD_LOGIC  := '0';
+    SIGNAL Data_L : STD_LOGIC_VECTOR (Data_Width-1 downto 0) := (others => '0');
+    SIGNAL Data_R : STD_LOGIC_VECTOR (Data_Width-1 downto 0) := (others => '0');
+    SIGNAL Ready : STD_LOGIC  := '0';
+    SIGNAL CLK : STD_LOGIC := '0';
+
+
+    Process Sim_CLK()
+    {
+        While(finished /= '1')
+        {
+            CLK <= '0';
+            wait for period_time/2;
+            CLK <= '1';
+            wait for period_time/2;
+        }
+        wait;
+    }
+    
+    Process ()
+    {
+        While(finished /= '1')
+        {
+            For(i IN 0 to 1000)
+            {
+                wait for 20 us;
+                I2S_Interface_OUT_Data_L <= STD_LOGIC_VECTOR(TO_UNSIGNED(i, 16));
+                I2S_Interface_OUT_Data_R <= STD_LOGIC_VECTOR(TO_UNSIGNED(1000-i, 16));
+            }
+        }
+        wait;
+    }
+
+    SIGNAL I2S_Interface_OUT_Data_L      : STD_LOGIC_VECTOR (16-1 downto 0) := (others => '0');
+    SIGNAL I2S_Interface_OUT_Data_R      : STD_LOGIC_VECTOR (16-1 downto 0) := (others => '0');
+    NewComponent I2S_Interface_OUT
+    (
+        Data_Width  => 16,
+        Sample_Bits => 32,
+        BCLK_Edge   => '1',
+
+        LRCLK       =>LRCLK,
+        BCLK        =>BCLK,
+        Data        =>Data,
+        Data_L      =>I2S_Interface_OUT_Data_L,
+        Data_R      =>I2S_Interface_OUT_Data_R,
+    );
+}
