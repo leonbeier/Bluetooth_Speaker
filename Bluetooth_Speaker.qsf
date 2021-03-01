@@ -23,13 +23,13 @@ set_global_assignment -name VHDL_FILE Generated/ADC_MAX10_Single.vhd
 set_global_assignment -name VHDL_FILE Generated/Bluetooth_Speaker.vhd
 set_global_assignment -name VHDL_FILE Generated/I2C_Master_Interface.vhd
 set_global_assignment -name VHDL_FILE Generated/I2S_Interface_IN.vhd
+set_global_assignment -name VHDL_FILE Generated/I2S_Interface_IN_Passive.vhd
 set_global_assignment -name VHDL_FILE Generated/I2S_Interface_OUT.vhd
 set_global_assignment -name VHDL_FILE Generated/MAX9867_Interface.vhd
 set_global_assignment -name VHDL_FILE Generated/PWM_Generator.vhd
 set_global_assignment -name VHDL_FILE Generated/WS2812_Interface.vhd
 set_global_assignment -name QSYS_FILE Libraries/ISSP/ISSP.qsys
 set_global_assignment -name QSYS_FILE Libraries/ADC_QSYS.qsys
-set_global_assignment -name VHDL_FILE i2s_in.vhd
 set_location_assignment PIN_H6 -to CLK
 set_location_assignment PIN_H3 -to LED_Strip_Out
 set_location_assignment PIN_E8 -to Next_LED

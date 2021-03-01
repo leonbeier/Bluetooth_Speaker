@@ -16,6 +16,9 @@
       <Header>I2S_Interface_IN.vhd</Header>
     </Items>
     <Items xsi:type="ProjectFileVHDL">
+      <Header>I2S_Interface_IN_Passive.vhd</Header>
+    </Items>
+    <Items xsi:type="ProjectFileVHDL">
       <Header>I2S_Interface_OUT.vhd</Header>
     </Items>
     <Items xsi:type="ProjectFileVHDL">
@@ -42,9 +45,6 @@
     <Items xsi:type="ProjectFileVHDP">
       <Header>ADC_MAX10_Single.vhdp</Header>
     </Items>
-    <Items xsi:type="ProjectFile">
-      <Header>ADC_QSYS.qsys</Header>
-    </Items>
     <Items xsi:type="ProjectFileVHDP">
       <Header>ADC_QSYS.qsys.vhdp</Header>
     </Items>
@@ -54,8 +54,8 @@
     <Items xsi:type="ProjectFileVHDP">
       <Header>I2S_IN.vhdp</Header>
     </Items>
-    <Items xsi:type="ProjectFileGHDP">
-      <Header>I2S_IN_Sim.ghdp</Header>
+    <Items xsi:type="ProjectFileVHDP">
+      <Header>I2S_IN_Passive.vhdp</Header>
     </Items>
     <Items xsi:type="ProjectFileVHDP">
       <Header>I2S_OUT.vhdp</Header>
@@ -69,12 +69,15 @@
     <Items xsi:type="ProjectFileVHDP">
       <Header>WS2812_LED_Strip.vhdp</Header>
     </Items>
+    <Items xsi:type="ProjectFileGHDP">
+      <Header>I2S_IN_Sim.ghdp</Header>
+    </Items>
+    <Items xsi:type="ProjectFile">
+      <Header>ADC_QSYS.qsys</Header>
+    </Items>
   </Items>
   <Items xsi:type="ProjectFileVHDP">
     <Header>Bluetooth_Speaker.vhdp</Header>
-  </Items>
-  <Items xsi:type="ProjectFileVHDL">
-    <Header>i2s_in.vhd</Header>
   </Items>
   <CruviHSExtensions>
     <string xsi:nil="true" />
