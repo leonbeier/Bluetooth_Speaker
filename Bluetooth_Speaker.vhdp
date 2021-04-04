@@ -31,6 +31,30 @@ Main
 
 --Buttons------------------------------------------------------------------------------------------
 
+    SIGNAL LED_Strip_On : STD_LOGIC := '0';
+    SIGNAL Color_Mode   : NATURAL range 0 to 7 := 2;
+    Process ()
+    {
+        Thread
+        {
+            While((Next_Btn AND Prev_Btn) = '1')  { Wait(100ms); } --Wait until Button released
+            While((Next_Btn OR  Prev_Btn) = '0')  { Wait(100ms); } --Wait for Button pressed
+            If(Color_Mode < 7)
+            {
+                Color_Mode <= Color_Mode + 1;
+            }
+            Else
+            {
+                Color_Mode <= 0;
+            }
+            Wait(2s);
+            If((Next_Btn AND Prev_Btn) = '1')
+            {
+                LED_Strip_On <= not LED_Strip_On;
+            }
+        }
+    }
+    
     SIGNAL Next_Btn  : STD_LOGIC;  --Next Song
     SIGNAL Prev_Btn  : STD_LOGIC;  --Last Song
     SIGNAL Pause_Btn : STD_LOGIC;  --Play/Pause
@@ -200,7 +224,7 @@ Main
     
 --LED Strip----------------------------------------------------------------------------------------
     
-    CONSTANT LEDs : NATURAL := 50;
+    CONSTANT LEDs : NATURAL := 51;
     
     CONSTANT Colors : NATURAL := 6;
     TYPE Colors_type IS ARRAY (0 to Colors-1) OF STD_LOGIC_VECTOR(23 downto 0);
@@ -219,19 +243,34 @@ Main
     {
         Thread
         {
-            For(VARIABLE color : NATURAL range 0 to Colors := 0; color < Colors; color := color + 1)
+            If(Color_Mode = 0)
             {
-                Wait(1s);
+                For(VARIABLE color : NATURAL range 0 to Colors := 0; color < Colors; color := color + 1)
+                {
+                    Wait(1s);
+                }
+            }
+            Else
+            {
+                color := Color_Mode-1;
             }
         }
         
         VARIABLE vol : NATURAL range 0 to 31;
-        vol := TO_INTEGER(Audio_Vol(12 downto 8));
+        --vol := highest_bit(Audio_Vol);
+        vol := TO_INTEGER(Audio_Vol(15 downto 10))*24/64;
         if(vol > 24) { vol := 24; }
         
-        If(LED_Strip_Address >= 24-vol AND LED_Strip_Address <= 25+vol)
+        If(LED_Strip_Address >= 25-vol AND LED_Strip_Address <= 26+vol AND LED_Strip_On = '1')
         {
-            LED_Strip_Pixel <= Colors_Arr(color);
+            If(color < 6)
+            {
+                LED_Strip_Pixel <= Colors_Arr(color);
+            }
+            Else
+            {
+                LED_Strip_Pixel <= (others => '1');
+            }
         }
         Else
         {
@@ -272,7 +311,7 @@ Main
             VARIABLE bluetooth_max : SIGNED (16 downto 0);
             SIGNAL Audio_Vol       : UNSIGNED (16 downto 0);
             --Check 1000 samples and calculate the amplitude -> The louder signal is played
-            For(VARIABLE ctr : NATURAL range 0 to 500 := 0; ctr < 500; ctr := ctr + 1)
+            For(VARIABLE ctr : NATURAL range 0 to 50 := 0; ctr < 50; ctr := ctr + 1)
             {
                 bluetooth_sum := resize(SIGNED(Bluetooth_Data_L), 17) + resize(SIGNED(Bluetooth_Data_R), 17);
                 If(ctr = 0)
@@ -340,19 +379,20 @@ Main
     
 --Mixer--------------------------------------------------------------------------------------------
     
-    SIGNAL Signal_Out_L : SIGNED  (15 downto 0);
-    SIGNAL Signal_Out_R : SIGNED  (15 downto 0);
     Process ()
     {
+        VARIABLE Signal_Out_L : SIGNED  (15 downto 0);
+        VARIABLE Signal_Out_R : SIGNED  (15 downto 0);
+        
         Thread
         {
-            VARIABLE Volume_Shifts : NATURAL range 0 to 7;
-            Volume_Shifts := Volume/2;
+            SIGNAL Volume_Shifts : NATURAL range 0 to 7;
+            Volume_Shifts <= Volume/2;
             While(true)
             {
                 If(Volume > (Volume_Shifts*2+1) OR Volume < (Volume_Shifts*2-1))
                 {
-                    Volume_Shifts := Volume/2;
+                    Volume_Shifts <= Volume/2;
                 }
                 Wait(100ms);
             }
@@ -383,56 +423,18 @@ Main
                 Bluetooth_On := '0';
             }
         }
-        
 
-        --If(Bluetooth_Out = '1')
         If(ISSP_source(0) = '1')
         {
-            /*
-            If(Bluetooth_On = '1')
-            {
-                Signal_Out_L <= SIGNED(Bluetooth_Data_L);
-                Signal_Out_R <= SIGNED(Bluetooth_Data_R);
-            }
-            Else
-            {
-                Signal_Out_L <= (others => '0');
-                Signal_Out_R <= (others => '0');
-            }
-            */
-            Signal_Out_L <= SIGNED(Bluetooth_Data_L);
-            Signal_Out_R <= SIGNED(Bluetooth_Data_R);
+            Signal_Out_L := Audio_Codec_Component_ADC_L;
+            Signal_Out_R := Audio_Codec_Component_ADC_R;
         }
         Else
         {
-            /*
-            If(Analog_On = '1')
-            {
-                Signal_Out_L <= Audio_Codec_Component_ADC_L;
-                Signal_Out_R <= Audio_Codec_Component_ADC_R;
-            }
-            Else
-            {
-                Signal_Out_L <= (others => '0');
-                Signal_Out_R <= (others => '0');
-            }
-            */
-            Signal_Out_L <= Audio_Codec_Component_ADC_L;
-            Signal_Out_R <= Audio_Codec_Component_ADC_R;
+            Signal_Out_L := SIGNED(Bluetooth_Data_L);
+            Signal_Out_R := SIGNED(Bluetooth_Data_R);
         }
-        
-        /*
-        If(ISSP_source(0) = '1')
-        {
-            Audio_Codec_Component_DAC_L <= shift_right(Signal_Out_L, (7-Volume_Shifts));
-            Audio_Codec_Component_DAC_R <= shift_right(Signal_Out_R, (7-Volume_Shifts));
-        }
-        Else
-        {
-            Audio_Codec_Component_DAC_L <= (others => '0');
-            Audio_Codec_Component_DAC_R <= (others => '0');
-        }
-        */
+
         Audio_Codec_Component_DAC_L <= shift_right(Signal_Out_L, (7-Volume_Shifts));
         Audio_Codec_Component_DAC_R <= shift_right(Signal_Out_R, (7-Volume_Shifts));
         
@@ -466,7 +468,6 @@ Main
             ISSP_probe(1) <= Bluetooth_On;
             ISSP_probe(2) <= Bluetooth_Out;
         }
-        
     }
     
 --Bluetooth----------------------------------------------------------------------------------------

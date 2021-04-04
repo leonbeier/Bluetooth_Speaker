@@ -52,13 +52,7 @@
       <Header>I2C.vhdp</Header>
     </Items>
     <Items xsi:type="ProjectFileVHDP">
-      <Header>I2S_IN.vhdp</Header>
-    </Items>
-    <Items xsi:type="ProjectFileVHDP">
       <Header>I2S_IN_Passive.vhdp</Header>
-    </Items>
-    <Items xsi:type="ProjectFileVHDP">
-      <Header>I2S_OUT.vhdp</Header>
     </Items>
     <Items xsi:type="ProjectFileVHDP">
       <Header>MAX9867_Audio_Codec.vhdp</Header>
@@ -68,9 +62,6 @@
     </Items>
     <Items xsi:type="ProjectFileVHDP">
       <Header>WS2812_LED_Strip.vhdp</Header>
-    </Items>
-    <Items xsi:type="ProjectFileGHDP">
-      <Header>I2S_IN_Sim.ghdp</Header>
     </Items>
     <Items xsi:type="ProjectFile">
       <Header>ADC_QSYS.qsys</Header>
@@ -85,9 +76,9 @@
   <CruviLSExtensions>
     <string xsi:nil="true" />
     <string xsi:nil="true" />
-    <string xsi:nil="true" />
     <string>AudioExtension</string>
+    <string xsi:nil="true" />
   </CruviLSExtensions>
-  <IOVoltage>0</IOVoltage>
+  <IOVoltage>7</IOVoltage>
   <UseShield>true</UseShield>
 </ProjectRoot>
