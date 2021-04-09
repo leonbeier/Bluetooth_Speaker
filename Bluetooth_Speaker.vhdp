@@ -424,15 +424,22 @@ Main
             }
         }
 
-        If(ISSP_source(0) = '1')
+        --If(ISSP_source(0) = '1')
+        If(Bluetooth_Out = '0')
         {
-            Signal_Out_L := Audio_Codec_Component_ADC_L;
-            Signal_Out_R := Audio_Codec_Component_ADC_R;
+            If(Analog_On = '1')
+            {
+                Signal_Out_L := Audio_Codec_Component_ADC_L;
+                Signal_Out_R := Audio_Codec_Component_ADC_R;
+            }
         }
         Else
         {
-            Signal_Out_L := SIGNED(Bluetooth_Data_L);
-            Signal_Out_R := SIGNED(Bluetooth_Data_R);
+            If(Bluetooth_On = '1')
+            {
+                Signal_Out_L := SIGNED(Bluetooth_Data_L);
+                Signal_Out_R := SIGNED(Bluetooth_Data_R);
+            }
         }
 
         Audio_Codec_Component_DAC_L <= shift_right(Signal_Out_L, (7-Volume_Shifts));
